@@ -32,8 +32,42 @@ The package is a thin adapter over the public `acgs-lite` API.
 pip install agentscope-acgs
 ```
 
-Requires Python 3.11 to 3.14, `agentscope>=2.0.6,<2.1` and `acgs-lite>=3.0.1,<4`. AgentScope 2.0.6 is the first
+Requires Python 3.11 to 3.14, `agentscope>=2.0.6,<2.1` and `acgs-lite>=3.0.1,<5`. AgentScope 2.0.6 is the first
 release with the `on_check_permission` middleware hook.
+
+### Compatibility
+
+| Component | Supported range | 0.2.0 validation |
+|---|---|---|
+| acgs-lite | `>=3.0.1,<5` | 4.0.0 tested via `uv.lock`; 3.0.1 floor tested by the CI `test-min` job |
+| AgentScope | `>=2.0.6,<2.1` | Tested via `uv.lock`; 2.0.6 floor tested by the CI `test-min` job |
+| Python | `>=3.11,<3.15` | CI covers 3.11–3.14; strict typing targets Python 3.11 |
+
+Default behavior stays compatible: this adapter formats arguments as text and calls `GovernanceEngine.validate`.
+It does not select the production authorization profile or issue signed execution receipts.
+
+When using acgs-lite 4.x `GovernedCallable` separately in production, provide a non-ephemeral Ed25519 receipt
+signer and pin its public key in `trusted_execution_keys`. Its governed inputs and outputs (and those of
+`GovernedAgent`) must be JSON-native: string-keyed objects, arrays, strings, finite numbers, booleans and null.
+Convert bytes/bytearray and custom Python objects before passing them to those APIs. The adapter's text formatter
+still renders bytes/bytearray as scalar values for rule matching. `GovernedAgent` also no longer passes per-call
+keyword arguments to rule conditions.
+
+A fresh environment installs the newest version allowed. To stay on 3.x, also require `"acgs-lite<4"`, for example
+`pip install agentscope-acgs "acgs-lite<4"`.
+
+### Offline deny-and-audit example
+
+Run [examples/deny_and_audit.py](examples/deny_and_audit.py) without an API key:
+
+```bash
+uv run --no-sync python examples/deny_and_audit.py
+```
+
+A scripted offline model requests one allowed note and one denied note. Only the allowed tool executes, then the
+example prints an application decision trail (tool name, permission behavior and reason) captured from the middleware's
+permission check. The trail omits argument values and is kept in memory; it is not a signed receipt or a durable engine
+audit log.
 
 ## Usage
 
